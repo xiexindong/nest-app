@@ -1,14 +1,22 @@
 {
+  // VS Code 任务配置文件版本
   "version": "2.0.0",
+  // 任务列表
   "tasks": [
     {
+      // 任务类型：TypeScript编译
       "type": "typescript",
+      // TypeScript配置文件路径
       "tsconfig": "tsconfig.json",
+      // 编译选项：监视文件变化并自动重新编译
       "option": "watch",
+      // 问题匹配器：用于识别TypeScript编译错误
       "problemMatcher": [
         "$tsc-watch"
       ],
+      // 任务分组：构建任务
       "group": "build",
+      // 任务标签，用于在launch.json中引用
       "label": "tsc: build - tsconfig.json"
     }
   ]

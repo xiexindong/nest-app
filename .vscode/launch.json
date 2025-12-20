@@ -1,42 +1,72 @@
 {
+  // VS Code 调试配置文件版本
   "version": "0.2.0",
+  // 调试配置列表
   "configurations": [
     {
+      // 调试器类型：Node.js
       "type": "node",
+      // 请求类型：启动新的调试会话
       "request": "launch",
+      // 配置名称，将在VS Code调试下拉菜单中显示
       "name": "Debug NestJS",
+      // 程序入口文件路径
       "program": "${workspaceFolder}/src/main.ts",
+      // 启动前执行的任务：构建项目
       "preLaunchTask": "npm: build - nest-app",
+      // 输出文件路径映射，用于源码调试
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      // 环境变量设置
       "env": {
         "NODE_ENV": "development"
       },
+      // 使用集成终端显示输出
       "console": "integratedTerminal",
+      // 自动重启调试会话
       "restart": true,
+      // 使用npm作为运行时执行器
       "runtimeExecutable": "npm",
+      // 传递给npm的参数：运行start:debug脚本
       "runtimeArgs": ["run", "start:debug"]
     },
     {
+      // 调试器类型：Node.js
       "type": "node",
+      // 请求类型：启动新的调试会话
       "request": "launch",
+      // 配置名称
       "name": "Debug NestJS (Simple)",
+      // 程序入口文件路径
       "program": "${workspaceFolder}/src/main.ts",
+      // 输出文件路径映射
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      // 环境变量设置
       "env": {
         "NODE_ENV": "development"
       },
+      // 使用集成终端
       "console": "integratedTerminal",
+      // 自动重启调试会话
       "restart": true,
+      // 运行时参数：启用调试并加载TypeScript支持
       "runtimeArgs": ["--inspect-brk", "-r", "ts-node/register", "-r", "tsconfig-paths/register", "src/main.ts"]
     },
     {
+      // 调试器类型：Node.js
       "type": "node",
+      // 请求类型：附加到已运行的进程
       "request": "attach",
+      // 配置名称
       "name": "Attach to NestJS",
+      // 调试端口，默认Node.js调试端口
       "port": 9229,
+      // 自动重启调试会话
       "restart": true,
+      // 本地源码根目录
       "localRoot": "${workspaceFolder}/src",
+      // 远程源码根目录（与本地相同）
       "remoteRoot": "${workspaceFolder}/src",
+      // 输出文件路径映射
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     }
   ]
