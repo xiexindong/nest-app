@@ -15,7 +15,10 @@ import {
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) {
+    console.log('UserController 实例化');
+    console.log('UserService 实例:', userService);
+  }
   // 此行仅为调试输出，已注释以避免语法错误
   // console.log(this.userService);
   /**
@@ -31,6 +34,11 @@ export class UserController {
    * 使用Reflect检查权限的中间件方法
    */
   private checkPermission(methodName: string) {
+    console.log('=== checkPermission 被调用 ===');
+    console.log('检查方法:', methodName);
+    console.log('this.userService 类型:', typeof this.userService);
+    console.log('this.userService 实例:', this.userService);
+
     const userService = this.userService;
     const userPermissions = this.getCurrentUserPermissions();
     // 使用Reflect检查方法权限
@@ -40,6 +48,7 @@ export class UserController {
         `需要权限: ${requiredPermissions.join(', ')}, 当前权限: ${userPermissions.join(', ')}`,
       );
     }
+    console.log('权限检查通过');
   }
 
   @Get()
@@ -57,16 +66,39 @@ export class UserController {
   }
 
   @Post()
-  createUser(@Body() userData: { name: string; role: string }) {
+  createUser(
+    @Body() userData: { name: string; role: string; password: string },
+  ) {
     // 使用Reflect检查权限
     this.checkPermission('createUser');
-    return this.userService.createUser(userData);
+    const fullUserData = {
+      ...userData,
+      username: userData.name, // 使用 name 作为 username 的默认值
+      email: `${userData.name}@example.com`, // 生成默认 email
+    };
+    return this.userService.createUser(fullUserData);
   }
 
   @Get('public/info')
   getPublicInfo() {
     // 公共信息不需要权限检查
     return this.userService.getPublicInfo();
+  }
+
+  @Get('debug/service')
+  getServiceDebugInfo() {
+    return {
+      userServiceType: typeof this.userService,
+      userServiceConstructor: this.userService.constructor.name,
+      userServiceInstance: !!this.userService,
+      hasGetAllUsers: typeof this.userService.getAllUsers === 'function',
+      hasGetUserById: typeof this.userService.getUserById === 'function',
+      hasCreateUser: typeof this.userService.createUser === 'function',
+      hasGetPublicInfo: typeof this.userService.getPublicInfo === 'function',
+      userServiceMethods: Object.getOwnPropertyNames(
+        Object.getPrototypeOf(this.userService),
+      ),
+    };
   }
 
   @Get('metadata/roles')
