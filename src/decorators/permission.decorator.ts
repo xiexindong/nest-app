@@ -56,9 +56,10 @@ export const hasPermission = (
 
   const requiredPermissions = getPermissions(target, propertyKey);
   // 检查用户是否拥有所需权限中的任意一个
-  return requiredPermissions.some((permission) =>
-    userPermissions.includes(permission),
-  );
+  return requiredPermissions.some((permission) => {
+    console.log('permission', permission);
+    return userPermissions.includes(permission);
+  });
 };
 
 /**

@@ -5,10 +5,12 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UserService } from '../services/user.service';
 import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../dto/auth.dto';
 import { JwtService } from '../utils/jwt.util';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly userService: UserService) {}
@@ -17,10 +19,15 @@ export class AuthController {
    * 用户登录接口
    */
   @Post('login')
-  login(@Body() loginDto: LoginDto) {
+  @ApiOperation({ summary: '用户登录' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({ status: 200, description: '登录成功' })
+  @ApiResponse({ status: 401, description: '用户名或密码错误' })
+  @ApiResponse({ status: 500, description: '服务器内部错误' })
+  async login(@Body() loginDto: LoginDto) {
     try {
       // 验证用户凭据
-      const user = this.userService.validateUser(loginDto);
+      const user = await this.userService.validateUser(loginDto);
       if (!user) {
         throw new HttpException('用户名或密码错误', HttpStatus.UNAUTHORIZED);
       }
@@ -57,6 +64,10 @@ export class AuthController {
    * 忘记密码接口
    */
   @Post('forgot-password')
+  @ApiOperation({ summary: '忘记密码' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({ status: 200, description: '处理成功' })
+  @ApiResponse({ status: 500, description: '服务器内部错误' })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     try {
       const result =
@@ -85,6 +96,11 @@ export class AuthController {
    * 重置密码接口
    */
   @Post('reset-password')
+  @ApiOperation({ summary: '重置密码' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 200, description: '密码重置成功' })
+  @ApiResponse({ status: 400, description: '令牌无效或其他错误' })
+  @ApiResponse({ status: 500, description: '服务器内部错误' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     try {
       const result = await this.userService.resetPassword(resetPasswordDto);
@@ -108,6 +124,21 @@ export class AuthController {
    * 验证令牌接口
    */
   @Post('verify-token')
+  @ApiOperation({ summary: '验证令牌' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string', description: 'JWT令牌' },
+      },
+      required: ['token'],
+    },
+  })
+  @ApiResponse({ status: 200, description: '令牌有效' })
+  @ApiResponse({ status: 400, description: '令牌不能为空' })
+  @ApiResponse({ status: 401, description: '令牌无效' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: 500, description: '服务器内部错误' })
   async verifyToken(@Body() body: { token: string }) {
     try {
       const { token } = body;

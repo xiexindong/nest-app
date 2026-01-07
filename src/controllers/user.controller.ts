@@ -6,6 +6,13 @@ import {
   Param,
   ForbiddenException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { UserService } from '../services/user.service';
 import {
   getPermissions,
@@ -13,6 +20,7 @@ import {
   hasPermission,
 } from '../decorators/permission.decorator';
 
+@ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {
@@ -52,6 +60,9 @@ export class UserController {
   }
 
   @Get()
+  @ApiOperation({ summary: '获取所有用户' })
+  @ApiResponse({ status: 200, description: '成功获取所有用户列表' })
+  @ApiResponse({ status: 403, description: '没有权限访问' })
   getAllUsers() {
     // 使用Reflect检查权限
     this.checkPermission('getAllUsers');
@@ -59,6 +70,11 @@ export class UserController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: '根据ID获取用户' })
+  @ApiParam({ name: 'id', description: '用户ID', type: 'number' })
+  @ApiResponse({ status: 200, description: '成功获取用户信息' })
+  @ApiResponse({ status: 403, description: '没有权限访问' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
   getUserById(@Param('id') id: string) {
     // 使用Reflect检查权限
     this.checkPermission('getUserById');
@@ -66,6 +82,25 @@ export class UserController {
   }
 
   @Post()
+  @ApiOperation({ summary: '创建新用户' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '用户姓名' },
+        role: {
+          type: 'string',
+          description: '用户角色',
+          enum: ['admin', 'user', 'guest'],
+        },
+        password: { type: 'string', description: '用户密码' },
+      },
+      required: ['name', 'role', 'password'],
+    },
+  })
+  @ApiResponse({ status: 201, description: '用户创建成功' })
+  @ApiResponse({ status: 403, description: '没有权限访问' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
   createUser(
     @Body() userData: { name: string; role: string; password: string },
   ) {
@@ -80,6 +115,8 @@ export class UserController {
   }
 
   @Get('public/info')
+  @ApiOperation({ summary: '获取公共信息' })
+  @ApiResponse({ status: 200, description: '成功获取公共信息' })
   getPublicInfo() {
     // 公共信息不需要权限检查
     return this.userService.getPublicInfo();
@@ -98,6 +135,27 @@ export class UserController {
       userServiceMethods: Object.getOwnPropertyNames(
         Object.getPrototypeOf(this.userService),
       ),
+    };
+  }
+
+  @Get('debug/properties')
+  getServiceProperties() {
+    // 尝试获取UserService实例的属性
+    const userService = this.userService as any;
+    return {
+      userServiceProperties: Object.getOwnPropertyNames(userService),
+      userServicePrototypeProperties: Object.getOwnPropertyNames(
+        Object.getPrototypeOf(userService),
+      ),
+      // 尝试获取Father属性的值
+      fatherValue: userService.Father || 'undefined',
+      // 尝试获取users属性的值
+      usersCount: userService.users ? userService.users.length : 0,
+      // 尝试获取users数组的第一个用户
+      firstUser:
+        userService.users && userService.users.length > 0
+          ? { id: userService.users[0].id, name: userService.users[0].name }
+          : null,
     };
   }
 
