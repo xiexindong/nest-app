@@ -3,49 +3,22 @@ import { Permissions, Roles } from '../decorators/permission.decorator';
 import { User } from '../models/user.model';
 import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../dto/auth.dto';
 import * as crypto from 'crypto';
+import { DatabaseService } from './database.service';
 
 @Injectable()
 @Roles('admin', 'user') // 使用Roles装饰器为类添加角色元数据
 export class UserService {
-  constructor() {
+  constructor(
+    private readonly databaseService: DatabaseService,
+  ) {
     console.log('=== UserService 实例化 ===');
     console.log('UserService 构造函数被调用');
+    console.log('Father 属性值:', this.Father);
+    console.log('实例属性:', Object.getOwnPropertyNames(this));
   }
 
-  // 模拟数据库中的用户数据，包含认证相关字段
-  private users: User[] = [
-    {
-      id: 1,
-      username: 'admin',
-      password: this.hashPassword('admin123'),
-      email: 'admin@example.com',
-      name: '张三',
-      role: 'admin',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 2,
-      username: 'user',
-      password: this.hashPassword('user123'),
-      email: 'user@example.com',
-      name: '李四',
-      role: 'user',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 3,
-      username: 'guest',
-      password: this.hashPassword('guest123'),
-      email: 'guest@example.com',
-      name: '王五',
-      role: 'guest',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
-
+  private Father: string = 'admin';
+  private Father22: string = 'admin';
   // 简单的密码哈希方法
   private hashPassword(password: string): string {
     return crypto.createHash('sha256').update(password).digest('hex');
@@ -67,8 +40,9 @@ export class UserService {
    * 需要'admin'权限
    */
   @Permissions('admin') // 使用Permissions装饰器为方法添加权限元数据
-  getAllUsers() {
-    return this.users;
+  async getAllUsers() {
+    const sql = 'SELECT * FROM users';
+    return await this.databaseService.executeQuery<User>(sql);
   }
 
   /**
@@ -76,9 +50,11 @@ export class UserService {
    * 需要'user'或'admin'权限
    */
   @Permissions('user', 'admin')
-  getUserById(id: number) {
+  async getUserById(id: number) {
     console.log(111111111, id);
-    return this.users.find((user) => user.id === id);
+    const sql = 'SELECT * FROM users WHERE id = ?';
+    const users = await this.databaseService.executeQuery<User>(sql, [id]);
+    return users.length > 0 ? users[0] : null;
   }
 
   /**
@@ -86,33 +62,34 @@ export class UserService {
    * 需要'admin'权限
    */
   @Permissions('admin')
-  createUser(userData: {
+  async createUser(userData: {
     name: string;
     role: string;
     username: string;
     password: string;
     email: string;
   }) {
-    const newUser: User = {
-      id: this.users.length + 1,
-      username: userData.username,
-      password: this.hashPassword(userData.password),
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.users.push(newUser);
-    return newUser;
+    const hashedPassword = this.hashPassword(userData.password);
+    const sql = `
+      INSERT INTO users (username, password, email, name, role, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+    const params = [userData.username, hashedPassword, userData.email, userData.name, userData.role];
+    
+    const insertId = await this.databaseService.executeCommand(sql, params);
+    
+    // 返回创建的用户信息
+    return this.getUserById(insertId);
   }
 
   /**
    * 公共方法，不需要任何权限
    */
-  getPublicInfo() {
+  async getPublicInfo() {
+    const sql = 'SELECT COUNT(*) as totalUsers FROM users';
+    const result = await this.databaseService.executeQuery<any>(sql);
     return {
-      totalUsers: this.users.length,
+      totalUsers: result[0].totalUsers,
       systemVersion: '1.0.0',
     };
   }
@@ -120,14 +97,18 @@ export class UserService {
   /**
    * 用户登录验证
    */
-  validateUser(loginDto: LoginDto): User | null {
+  async validateUser(loginDto: LoginDto): Promise<User | null> {
     const { username, password } = loginDto;
-    const user = this.users.find((u) => u.username === username);
-
-    if (user && this.validatePassword(password, user.password)) {
-      // 返回用户信息但不包含密码
-      const { ...result } = user;
-      return result as User;
+    const sql = 'SELECT * FROM users WHERE username = ?';
+    const users = await this.databaseService.executeQuery<User>(sql, [username]);
+    
+    if (users.length === 0) {
+      return null;
+    }
+    
+    const user = users[0];
+    if (this.validatePassword(password, user.password)) {
+      return user;
     }
 
     return null;
@@ -136,15 +117,19 @@ export class UserService {
   /**
    * 根据用户名查找用户
    */
-  findByUsername(username: string): User | null {
-    return this.users.find((u) => u.username === username) || null;
+  async findByUsername(username: string): Promise<User | null> {
+    const sql = 'SELECT * FROM users WHERE username = ?';
+    const users = await this.databaseService.executeQuery<User>(sql, [username]);
+    return users.length > 0 ? users[0] : null;
   }
 
   /**
    * 根据邮箱查找用户
    */
   async findByEmail(email: string): Promise<User | null> {
-    return Promise.resolve(this.users.find((u) => u.email === email) || null);
+    const sql = 'SELECT * FROM users WHERE email = ?';
+    const users = await this.databaseService.executeQuery<User>(sql, [email]);
+    return users.length > 0 ? users[0] : null;
   }
 
   /**
@@ -165,9 +150,12 @@ export class UserService {
     expires.setHours(expires.getHours() + 1); // 令牌1小时后过期
 
     // 更新用户的重置密码令牌和过期时间
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = expires;
-    user.updatedAt = new Date();
+    const sql = `
+      UPDATE users 
+      SET resetPasswordToken = ?, resetPasswordExpires = ?, updatedAt = NOW()
+      WHERE id = ?
+    `;
+    await this.databaseService.executeCommand(sql, [token, expires, user.id]);
 
     // 在实际应用中，这里应该发送邮件包含重置链接
     console.log(`重置密码令牌已生成: ${token}`);
@@ -187,36 +175,33 @@ export class UserService {
     const { token, newPassword } = resetPasswordDto;
 
     // 查找具有有效令牌的用户
-    const user = this.users.find(
-      (u) =>
-        u.resetPasswordToken === token &&
-        u.resetPasswordExpires &&
-        u.resetPasswordExpires > new Date(),
-    );
-
-    if (!user) {
-      return Promise.resolve({ success: false, message: '令牌无效或已过期' });
+    const sql = 'SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpires > NOW()';
+    const users = await this.databaseService.executeQuery<User>(sql, [token]);
+    
+    if (users.length === 0) {
+      return { success: false, message: '令牌无效或已过期' };
     }
 
-    // 更新密码
-    user.password = this.hashPassword(newPassword);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    user.updatedAt = new Date();
+    const user = users[0];
+    // 更新密码和清除令牌
+    const hashedPassword = this.hashPassword(newPassword);
+    const updateSql = `
+      UPDATE users 
+      SET password = ?, resetPasswordToken = NULL, resetPasswordExpires = NULL, updatedAt = NOW()
+      WHERE id = ?
+    `;
+    
+    await this.databaseService.executeCommand(updateSql, [hashedPassword, user.id]);
 
-    return Promise.resolve({ success: true, message: '密码重置成功' });
+    return { success: true, message: '密码重置成功' };
   }
 
   /**
    * 根据ID获取用户（不包含密码）
    */
   async getUserByIdSafe(id: number): Promise<Omit<User, 'password'> | null> {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) {
-      return null;
-    }
-
-    const { ...result } = user;
-    return Promise.resolve(result);
+    const sql = 'SELECT id, username, email, name, role, createdAt, updatedAt FROM users WHERE id = ?';
+    const users = await this.databaseService.executeQuery<Omit<User, 'password'>>(sql, [id]);
+    return users.length > 0 ? users[0] : null;
   }
 }
