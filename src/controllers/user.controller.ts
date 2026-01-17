@@ -140,22 +140,13 @@ export class UserController {
 
   @Get('debug/properties')
   getServiceProperties() {
-    // 尝试获取UserService实例的属性
-    const userService = this.userService as any;
+    // 安全地获取UserService实例的属性
     return {
-      userServiceProperties: Object.getOwnPropertyNames(userService),
+      userServiceProperties: Object.getOwnPropertyNames(this.userService),
       userServicePrototypeProperties: Object.getOwnPropertyNames(
-        Object.getPrototypeOf(userService),
+        Object.getPrototypeOf(this.userService),
       ),
-      // 尝试获取Father属性的值
-      fatherValue: userService.Father || 'undefined',
-      // 尝试获取users属性的值
-      usersCount: userService.users ? userService.users.length : 0,
-      // 尝试获取users数组的第一个用户
-      firstUser:
-        userService.users && userService.users.length > 0
-          ? { id: userService.users[0].id, name: userService.users[0].name }
-          : null,
+      // 不直接访问私有属性，避免类型错误
     };
   }
 

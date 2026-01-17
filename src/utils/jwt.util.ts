@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
 import * as jwt from 'jsonwebtoken';
 
@@ -23,7 +20,7 @@ export class JwtService {
   static generateToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
     try {
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+       
       return token;
     } catch (error) {
       console.error('JWT token generation error:', error);

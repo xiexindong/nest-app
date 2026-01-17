@@ -8,9 +8,7 @@ import { DatabaseService } from './database.service';
 @Injectable()
 @Roles('admin', 'user') // 使用Roles装饰器为类添加角色元数据
 export class UserService {
-  constructor(
-    private readonly databaseService: DatabaseService,
-  ) {
+  constructor(private readonly databaseService: DatabaseService) {
     console.log('=== UserService 实例化 ===');
     console.log('UserService 构造函数被调用');
     console.log('Father 属性值:', this.Father);
@@ -74,10 +72,16 @@ export class UserService {
       INSERT INTO users (username, password, email, name, role, createdAt, updatedAt)
       VALUES (?, ?, ?, ?, ?, NOW(), NOW())
     `;
-    const params = [userData.username, hashedPassword, userData.email, userData.name, userData.role];
-    
+    const params = [
+      userData.username,
+      hashedPassword,
+      userData.email,
+      userData.name,
+      userData.role,
+    ];
+
     const insertId = await this.databaseService.executeCommand(sql, params);
-    
+
     // 返回创建的用户信息
     return this.getUserById(insertId);
   }
@@ -87,9 +91,13 @@ export class UserService {
    */
   async getPublicInfo() {
     const sql = 'SELECT COUNT(*) as totalUsers FROM users';
-    const result = await this.databaseService.executeQuery<any>(sql);
+    // 定义明确的类型接口
+    interface CountResult {
+      totalUsers: number;
+    }
+    const result = await this.databaseService.executeQuery<CountResult>(sql);
     return {
-      totalUsers: result[0].totalUsers,
+      totalUsers: result[0]?.totalUsers || 0,
       systemVersion: '1.0.0',
     };
   }
@@ -100,12 +108,14 @@ export class UserService {
   async validateUser(loginDto: LoginDto): Promise<User | null> {
     const { username, password } = loginDto;
     const sql = 'SELECT * FROM users WHERE username = ?';
-    const users = await this.databaseService.executeQuery<User>(sql, [username]);
-    
+    const users = await this.databaseService.executeQuery<User>(sql, [
+      username,
+    ]);
+
     if (users.length === 0) {
       return null;
     }
-    
+
     const user = users[0];
     if (this.validatePassword(password, user.password)) {
       return user;
@@ -119,7 +129,9 @@ export class UserService {
    */
   async findByUsername(username: string): Promise<User | null> {
     const sql = 'SELECT * FROM users WHERE username = ?';
-    const users = await this.databaseService.executeQuery<User>(sql, [username]);
+    const users = await this.databaseService.executeQuery<User>(sql, [
+      username,
+    ]);
     return users.length > 0 ? users[0] : null;
   }
 
@@ -175,9 +187,10 @@ export class UserService {
     const { token, newPassword } = resetPasswordDto;
 
     // 查找具有有效令牌的用户
-    const sql = 'SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpires > NOW()';
+    const sql =
+      'SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpires > NOW()';
     const users = await this.databaseService.executeQuery<User>(sql, [token]);
-    
+
     if (users.length === 0) {
       return { success: false, message: '令牌无效或已过期' };
     }
@@ -190,8 +203,11 @@ export class UserService {
       SET password = ?, resetPasswordToken = NULL, resetPasswordExpires = NULL, updatedAt = NOW()
       WHERE id = ?
     `;
-    
-    await this.databaseService.executeCommand(updateSql, [hashedPassword, user.id]);
+
+    await this.databaseService.executeCommand(updateSql, [
+      hashedPassword,
+      user.id,
+    ]);
 
     return { success: true, message: '密码重置成功' };
   }
@@ -200,8 +216,11 @@ export class UserService {
    * 根据ID获取用户（不包含密码）
    */
   async getUserByIdSafe(id: number): Promise<Omit<User, 'password'> | null> {
-    const sql = 'SELECT id, username, email, name, role, createdAt, updatedAt FROM users WHERE id = ?';
-    const users = await this.databaseService.executeQuery<Omit<User, 'password'>>(sql, [id]);
+    const sql =
+      'SELECT id, username, email, name, role, createdAt, updatedAt FROM users WHERE id = ?';
+    const users = await this.databaseService.executeQuery<
+      Omit<User, 'password'>
+    >(sql, [id]);
     return users.length > 0 ? users[0] : null;
   }
 }
