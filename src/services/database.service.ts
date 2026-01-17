@@ -17,16 +17,26 @@ export class DatabaseService {
    * @param params 参数数组
    * @returns 查询结果数组
    */
-  async executeQuery<T>(sql: string, params: any[] = []): Promise<T[]> {
+  async executeQuery<T>(sql: string, params: unknown[] = []): Promise<T[]> {
     this.logger.log(`执行查询: ${sql}`, params);
     const queryRunner = this.connection.createQueryRunner();
-    
+
     try {
       await queryRunner.connect();
-      const result = await queryRunner.query(sql, params);
-      return result;
+      // query()方法不接受类型参数，返回QueryResult类型
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const queryResult = await queryRunner.query(sql, params);
+
+      // 从QueryResult中提取rows属性，处理不同数据库驱动的差异
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const rows =
+        'rows' in (queryResult as Record<string, unknown>)
+          ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            queryResult.rows
+          : queryResult;
+      return rows as T[];
     } catch (error) {
-      this.logger.error(`查询失败: ${sql}`, error.stack);
+      this.logger.error(`查询失败: ${sql}`, (error as Error).stack);
       throw error;
     } finally {
       await queryRunner.release();
@@ -39,24 +49,31 @@ export class DatabaseService {
    * @param params 参数数组
    * @returns 受影响的行数或插入的ID
    */
-  async executeCommand(sql: string, params: any[] = []): Promise<number> {
+  async executeCommand(sql: string, params: unknown[] = []): Promise<number> {
     this.logger.log(`执行命令: ${sql}`, params);
     const queryRunner = this.connection.createQueryRunner();
-    
+
     try {
       await queryRunner.connect();
-      const result = await queryRunner.query(sql, params);
-      
-      // 根据数据库类型返回适当的结果
-      if (result && result.insertId) {
-        return result.insertId;
+      // query()方法不接受类型参数，返回QueryResult类型
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const queryResult = await queryRunner.query(sql, params);
+      const result = queryResult as Record<string, unknown>;
+
+      // 使用结果对象，确保返回明确的number类型
+      if (result?.insertId !== undefined) {
+        return Number(result.insertId);
       }
-      if (result && result.affectedRows) {
-        return result.affectedRows;
+      // TypeORM QueryResult使用affected而不是affectedRows
+      if (result?.affected !== undefined) {
+        return Number(result.affected);
+      }
+      if (result?.affectedRows !== undefined) {
+        return Number(result.affectedRows);
       }
       return 1; // 默认成功返回1
     } catch (error) {
-      this.logger.error(`命令执行失败: ${sql}`, error.stack);
+      this.logger.error(`命令执行失败: ${sql}`, (error as Error).stack);
       throw error;
     } finally {
       await queryRunner.release();
