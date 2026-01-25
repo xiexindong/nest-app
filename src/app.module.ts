@@ -4,8 +4,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserController } from './controllers/user.controller';
 import { AuthController } from './controllers/auth.controller';
+import { SqlPracticeController } from './controllers/sql-practice.controller';
 import { UserService } from './services/user.service';
 import { DatabaseService } from './services/database.service';
+import { ItemModule } from './modules/item/item.module';
 
 @Module({
   imports: [
@@ -20,8 +22,14 @@ import { DatabaseService } from './services/database.service';
       synchronize: false,
       logging: true,
     }),
+    ItemModule,
   ],
-  controllers: [AppController, UserController, AuthController],
+  controllers: [
+    AppController,
+    UserController,
+    AuthController,
+    SqlPracticeController,
+  ],
   providers: [AppService, UserService, DatabaseService],
 })
 export class AppModule {}

@@ -17,7 +17,7 @@ export class DatabaseService {
    * @param params 参数数组
    * @returns 查询结果数组
    */
-  async executeQuery<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  async executeQuery<T>(sql: string, params: any[] = []): Promise<T[]> {
     this.logger.log(`执行查询: ${sql}`, params);
     const queryRunner = this.connection.createQueryRunner();
 
@@ -49,7 +49,7 @@ export class DatabaseService {
    * @param params 参数数组
    * @returns 受影响的行数或插入的ID
    */
-  async executeCommand(sql: string, params: unknown[] = []): Promise<number> {
+  async executeCommand(sql: string, params: any[] = []): Promise<number> {
     this.logger.log(`执行命令: ${sql}`, params);
     const queryRunner = this.connection.createQueryRunner();
 
@@ -89,5 +89,51 @@ export class DatabaseService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     return queryRunner;
+  }
+
+  /**
+   * 提交事务
+   * @param queryRunner 查询运行器
+   */
+  async commitTransaction(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.commitTransaction();
+    await queryRunner.release();
+  }
+
+  /**
+   * 回滚事务
+   * @param queryRunner 查询运行器
+   */
+  async rollbackTransaction(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.rollbackTransaction();
+    await queryRunner.release();
+  }
+
+  /**
+   * 释放查询运行器
+   * @param queryRunner 查询运行器
+   */
+  async releaseQueryRunner(queryRunner: QueryRunner): Promise<void> {
+    if (queryRunner.isReleased === false) {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * 在事务中执行操作
+   * @param operation 要执行的操作函数
+   * @returns 操作结果
+   */
+  async transaction<T>(operation: (queryRunner: QueryRunner) => Promise<T>): Promise<T> {
+    const queryRunner = await this.startTransaction();
+    try {
+      const result = await operation(queryRunner);
+      await this.commitTransaction(queryRunner);
+      return result;
+    } catch (error) {
+      await this.rollbackTransaction(queryRunner);
+      this.logger.error(`事务执行失败: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
   }
 }
