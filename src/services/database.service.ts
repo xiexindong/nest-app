@@ -124,7 +124,9 @@ export class DatabaseService {
    * @param operation 要执行的操作函数
    * @returns 操作结果
    */
-  async transaction<T>(operation: (queryRunner: QueryRunner) => Promise<T>): Promise<T> {
+  async transaction<T>(
+    operation: (queryRunner: QueryRunner) => Promise<T>,
+  ): Promise<T> {
     const queryRunner = await this.startTransaction();
     try {
       const result = await operation(queryRunner);
@@ -132,7 +134,10 @@ export class DatabaseService {
       return result;
     } catch (error) {
       await this.rollbackTransaction(queryRunner);
-      this.logger.error(`事务执行失败: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `事务执行失败: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }

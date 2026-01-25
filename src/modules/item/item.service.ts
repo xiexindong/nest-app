@@ -30,11 +30,9 @@ export class ItemService {
   async findOne(id: number): Promise<Item> {
     const query = 'SELECT * FROM items WHERE id = ?';
     const items = await this.databaseService.executeQuery<Item>(query, [id]);
-    
     if (items.length === 0) {
       throw new NotFoundException(`Item with ID ${id} not found`);
     }
-    
     return items[0];
   }
 
