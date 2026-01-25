@@ -9,7 +9,9 @@ export class DepatmentController {
   @ApiTags('部门')
   @Get()
   @ApiQuery({ name: 'id', required: false, description: '部门ID' })
-  getAllDepartments(@Query('id') id?: number): Promise<Department[]> {
+  getAllDepartments(
+    @Query('id') id?: number | number[],
+  ): Promise<Department[]> {
     return this.depatmentService.getAllDepartments(id);
   }
 }
