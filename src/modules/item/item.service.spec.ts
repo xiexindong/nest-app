@@ -9,7 +9,7 @@ const mockDatabaseService = {
 
 describe('ItemService', () => {
   let service: ItemService;
-  
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,7 +37,7 @@ describe('ItemService', () => {
         price: 99.99,
         quantity: 10,
       };
-      
+
       const mockResult = { insertId: 1 };
       const mockItem = {
         id: 1,
@@ -48,13 +48,13 @@ describe('ItemService', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      
+
       mockDatabaseService.executeQuery
         .mockResolvedValueOnce([mockResult])
         .mockResolvedValueOnce([mockItem]);
-      
+
       const result = await service.create(createItemDto);
-      
+
       expect(result).toEqual(mockItem);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(2);
     });
@@ -72,11 +72,11 @@ describe('ItemService', () => {
           updated_at: new Date(),
         },
       ];
-      
+
       mockDatabaseService.executeQuery.mockResolvedValueOnce(mockItems);
-      
+
       const result = await service.findAll();
-      
+
       expect(result).toEqual(mockItems);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(1);
     });
@@ -92,18 +92,18 @@ describe('ItemService', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      
+
       mockDatabaseService.executeQuery.mockResolvedValueOnce([mockItem]);
-      
+
       const result = await service.findOne(1);
-      
+
       expect(result).toEqual(mockItem);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException if item not found', async () => {
       mockDatabaseService.executeQuery.mockResolvedValueOnce([]);
-      
+
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(1);
     });
@@ -117,7 +117,7 @@ describe('ItemService', () => {
         price: 199.99,
         quantity: 20,
       };
-      
+
       const mockExistingItem = {
         id: 1,
         name: 'Test Item',
@@ -126,7 +126,7 @@ describe('ItemService', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      
+
       const mockUpdatedItem = {
         id: 1,
         name: 'Updated Item',
@@ -136,14 +136,14 @@ describe('ItemService', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      
+
       mockDatabaseService.executeQuery
         .mockResolvedValueOnce([mockExistingItem])
         .mockResolvedValueOnce([{ affectedRows: 1 }])
         .mockResolvedValueOnce([mockUpdatedItem]);
-      
+
       const result = await service.update(1, updateItemDto);
-      
+
       expect(result).toEqual(mockUpdatedItem);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(3);
     });
@@ -155,10 +155,12 @@ describe('ItemService', () => {
         price: 199.99,
         quantity: 20,
       };
-      
+
       mockDatabaseService.executeQuery.mockResolvedValueOnce([]);
-      
-      await expect(service.update(999, updateItemDto)).rejects.toThrow(NotFoundException);
+
+      await expect(service.update(999, updateItemDto)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(1);
     });
   });
@@ -173,20 +175,22 @@ describe('ItemService', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      
+
       mockDatabaseService.executeQuery
         .mockResolvedValueOnce([mockExistingItem])
         .mockResolvedValueOnce([{ affectedRows: 1 }]);
-      
+
       const result = await service.remove(1);
-      
-      expect(result).toEqual({ message: 'Item with ID 1 deleted successfully' });
+
+      expect(result).toEqual({
+        message: 'Item with ID 1 deleted successfully',
+      });
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(2);
     });
 
     it('should throw NotFoundException if item not found', async () => {
       mockDatabaseService.executeQuery.mockResolvedValueOnce([]);
-      
+
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
       expect(mockDatabaseService.executeQuery).toHaveBeenCalledTimes(1);
     });
