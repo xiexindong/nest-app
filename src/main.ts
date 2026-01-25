@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  console.log('Starting NestJS application...');
   const app = await NestFactory.create(AppModule);
   // 配置 Swagger
   const config = new DocumentBuilder()

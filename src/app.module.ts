@@ -8,6 +8,7 @@ import { SqlPracticeController } from './controllers/sql-practice.controller';
 import { UserService } from './services/user.service';
 import { DatabaseService } from './services/database.service';
 import { ItemModule } from './modules/item/item.module.js';
+import { DepatmentController } from './depatment/depatment.controller';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ItemModule } from './modules/item/item.module.js';
     UserController,
     AuthController,
     SqlPracticeController,
+    DepatmentController,
   ],
   providers: [AppService, UserService, DatabaseService],
 })

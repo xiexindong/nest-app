@@ -12,14 +12,14 @@ export class ItemService {
       INSERT INTO items (name, description, price, quantity, created_at, updated_at)
       VALUES (?, ?, ?, ?, NOW(), NOW())
     `;
-    const result = await this.databaseService.executeQuery<any>(query, [
+    const insertId = await this.databaseService.executeCommand(query, [
       createItemDto.name,
       createItemDto.description,
       createItemDto.price,
       createItemDto.quantity,
     ]);
 
-    return this.findOne(result.insertId);
+    return this.findOne(insertId);
   }
 
   async findAll(): Promise<Item[]> {
