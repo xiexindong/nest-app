@@ -87,6 +87,57 @@ export class UserService {
   }
 
   /**
+   * 创建用户并分配角色（事务处理示例）
+   * 需要'admin'权限
+   */
+  @Permissions('admin')
+  async createUserWithRoles(userData: {
+    name: string;
+    role: string;
+    username: string;
+    password: string;
+    email: string;
+    roleIds: number[];
+  }) {
+    return this.databaseService.transaction(async (queryRunner) => {
+      // 1. 创建用户
+      const hashedPassword = this.hashPassword(userData.password);
+      const insertUserSql = `
+        INSERT INTO users (username, password, email, name, role, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+      `;
+      const userResult = await queryRunner.query(insertUserSql, [
+        userData.username,
+        hashedPassword,
+        userData.email,
+        userData.name,
+        userData.role,
+      ]);
+      
+      const userId = Number(userResult.insertId || userResult[0]?.insertId || 0);
+      
+      // 2. 如果提供了角色ID，分配角色
+      if (userData.roleIds && userData.roleIds.length > 0) {
+        const insertRoleSql = `
+          INSERT INTO user_roles (userId, roleId, createdAt)
+          VALUES (?, ?, NOW())
+        `;
+        
+        // 批量插入用户角色关系
+        for (const roleId of userData.roleIds) {
+          await queryRunner.query(insertRoleSql, [userId, roleId]);
+        }
+      }
+      
+      // 3. 返回创建的用户信息
+      const getUserSql = 'SELECT * FROM users WHERE id = ?';
+      const users = await queryRunner.query(getUserSql, [userId]);
+      
+      return users[0] || null;
+    });
+  }
+
+  /**
    * 公共方法，不需要任何权限
    */
   async getPublicInfo() {

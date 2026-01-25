@@ -15,7 +15,7 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { DatabaseService } from '../services/database.service';
+import { DatabaseService } from '../services/database.service.js';
 
 @ApiTags('sql-practice')
 @Controller('sql-practice')

@@ -7,7 +7,7 @@ import { AuthController } from './controllers/auth.controller';
 import { SqlPracticeController } from './controllers/sql-practice.controller';
 import { UserService } from './services/user.service';
 import { DatabaseService } from './services/database.service';
-import { ItemModule } from './modules/item/item.module';
+import { ItemModule } from './modules/item/item.module.js';
 
 @Module({
   imports: [

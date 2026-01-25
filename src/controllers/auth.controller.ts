@@ -6,9 +6,9 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { UserService } from '../services/user.service';
+import { UserService } from '../services/user.service.js';
 import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../dto/auth.dto';
-import { JwtService } from '../utils/jwt.util';
+import { JwtService } from '../utils/jwt.util.js';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -31,12 +31,21 @@ export class AuthController {
       if (!user) {
         throw new HttpException('用户名或密码错误', HttpStatus.UNAUTHORIZED);
       }
-      // 生成JWT令牌
-      const token = JwtService.generateToken({
+      // 生成JWT访问令牌
+      const accessToken = JwtService.generateToken({
         sub: user.id,
         username: user.username,
         role: user.role,
       });
+
+      // 生成JWT刷新令牌
+      const refreshToken = JwtService.generateRefreshToken({
+        sub: user.id,
+        jti:
+          Math.random().toString(36).substring(2, 15) +
+          Math.random().toString(36).substring(2, 15),
+      });
+
       // 返回用户信息和令牌
       return {
         success: true,
@@ -49,7 +58,8 @@ export class AuthController {
             email: user.email,
             role: user.role,
           },
-          token,
+          accessToken,
+          refreshToken,
         },
       };
     } catch (error) {
@@ -170,6 +180,72 @@ export class AuthController {
         throw error;
       }
       throw new HttpException('令牌无效', HttpStatus.UNAUTHORIZED);
+    }
+  }
+
+  /**
+   * 刷新令牌接口
+   */
+  @Post('refresh-token')
+  @ApiOperation({ summary: '刷新访问令牌' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        refreshToken: { type: 'string', description: '刷新令牌' },
+      },
+      required: ['refreshToken'],
+    },
+  })
+  @ApiResponse({ status: 200, description: '刷新令牌成功' })
+  @ApiResponse({ status: 400, description: '刷新令牌不能为空' })
+  @ApiResponse({ status: 401, description: '刷新令牌无效' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: 500, description: '服务器内部错误' })
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    try {
+      const { refreshToken } = body;
+      if (!refreshToken) {
+        throw new HttpException('刷新令牌不能为空', HttpStatus.BAD_REQUEST);
+      }
+
+      // 验证刷新令牌
+      const payload = JwtService.verifyRefreshToken(refreshToken);
+
+      // 获取用户详细信息
+      const user = await this.userService.getUserByIdSafe(payload.sub);
+      if (!user) {
+        throw new HttpException('用户不存在', HttpStatus.NOT_FOUND);
+      }
+
+      // 生成新的访问令牌
+      const newAccessToken = JwtService.generateToken({
+        sub: user.id,
+        username: user.username,
+        role: user.role,
+      });
+
+      // 生成新的刷新令牌
+      const newRefreshToken = JwtService.generateRefreshToken({
+        sub: user.id,
+        jti:
+          Math.random().toString(36).substring(2, 15) +
+          Math.random().toString(36).substring(2, 15),
+      });
+
+      return {
+        success: true,
+        message: '令牌刷新成功',
+        data: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('刷新令牌失败', HttpStatus.UNAUTHORIZED);
     }
   }
 }

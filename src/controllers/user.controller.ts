@@ -13,7 +13,7 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
-import { UserService } from '../services/user.service';
+import { UserService } from '../services/user.service.js';
 import {
   getPermissions,
   getRoles,
